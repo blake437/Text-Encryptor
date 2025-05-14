@@ -1,13 +1,62 @@
 <html>
   <head>
-    
+    <style>
+      /* Add basic styles for tabs */
+      .tab {
+        display: flex;
+        cursor: pointer;
+        padding: 10px;
+        background-color: #f1f1f1;
+        border: 1px solid #ccc;
+        margin-right: 5px;
+      }
+
+      .tab:hover {
+        background-color: #ddd;
+      }
+
+      .tab-content {
+        display: none;
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin-top: 10px;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+    </style>
   </head>
   <body>
-    <input type="text" placeholder="encryption key" id"="key">
-    <input type="number" placeholder="message number">
-    
+    <input type="text" placeholder="encryption key" id="key">
+    <input type="number" placeholder="message number" id="num">
+
+    <!-- Tabs -->
+    <div id="tabs">
+      <div class="tab" onclick="showTabContent('tab1')">Encrypt</div>
+      <div class="tab" onclick="showTabContent('tab2')">Decrypt</div>
+    </div>
+    <div id="tab1" class="tab-content">
+      Plaintext:
+      <textarea id="plaintext">
+      <button type="button" onclick="encrypt()">Encrypt</button>
+    </div>
+    <div id="tab2" class="tab-content">
+      Ciphertext:
+      <textarea id="ciphertext">
+      <button type="button" onclick="decrypt">Decrypt</button>
+    </div>
   </body>
   <script>
-    
+    // JavaScript to handle tab switching
+    function showTabContent(tabId) {
+      // Hide all tab content
+      const contents = document.querySelectorAll('.tab-content');
+      contents.forEach(content => content.classList.remove('active'));
+
+      // Show the selected tab content
+      const selectedTab = document.getElementById(tabId);
+      selectedTab.classList.add('active');
+    }
   </script>
 </html>
