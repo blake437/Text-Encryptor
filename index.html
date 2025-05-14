@@ -59,10 +59,16 @@
       selectedTab.classList.add('active');
     }
   // Function to handle Encrypt button click
-    async function encrypt() {
-      const key = document.getElementById('key').value; // Get the encryption key
-      const num = document.getElementById('num').value; // Get the message number
+    async function encrypt() { 
+        const key = document.getElementById('key').value; // Get the encryption key
+      let num = document.getElementById('num').value; // Get the message number
       const plaintext = document.getElementById('plaintext').value; // Get the plaintext
+
+      // Set the message number to a random number if it is 0 or not set
+      if (!num || num === "0") {
+        num = Math.floor(Math.random() * 1000000); // Generate a random number (e.g., between 0 and 999999)
+        document.getElementById('num').value = num; // Update the input field with the random number
+      }
 
       // Helper function to compute SHA-256 hash
       async function sha256(message) {
