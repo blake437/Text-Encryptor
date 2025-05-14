@@ -33,10 +33,10 @@
 
     <!-- Tabs -->
     <div id="tabs">
-      <div class="tab active" onclick="showTabContent('tab1')">Encrypt</div>
+      <div class="tab" onclick="showTabContent('tab1')">Encrypt</div>
       <div class="tab" onclick="showTabContent('tab2')">Decrypt</div>
     </div>
-    <div id="tab1" class="tab-content">
+    <div id="tab1" class="tab-content active">
       Plaintext:
       <textarea id="plaintext">
       <button type="button" onclick="encrypt()">Encrypt</button>
@@ -137,6 +137,8 @@ function bigIntToString(bigInt) {
       const ciphertext = bigIntToString(bigintciphertext)
 
       document.getElementById('ciphertext').value = ciphertext;
+
+      showTabContent('tab2')
 }
 
   // Function to handle Decrypt button click
@@ -171,6 +173,8 @@ function bigIntToString(bigInt) {
   console.log('Final Hash for Decryption:', finalHash);
 
   //use `finalHash` for decryption logic
+
+ const bigintciphertext = strToBigInt(ciphertext)
 }
   </script>
 </html>
