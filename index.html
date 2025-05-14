@@ -59,37 +59,37 @@
       selectedTab.classList.add('active');
     }
   // Function to handle Encrypt button click
-  async function encrypt() {
-  const key = document.getElementById('key').value; // Get the encryption key
-  const num = document.getElementById('num').value; // Get the message number
-  const plaintext = document.getElementById('plaintext').value; // Get the plaintext
+    async function encrypt() {
+      const key = document.getElementById('key').value; // Get the encryption key
+      const num = document.getElementById('num').value; // Get the message number
+      const plaintext = document.getElementById('plaintext').value; // Get the plaintext
 
-  // Helper function to compute SHA-256 hash
-  async function sha256(message) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
+      // Helper function to compute SHA-256 hash
+      async function sha256(message) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
 
-  // Compute hashes
-  const keyHash = await sha256(key);
-  const numHash = await sha256(num);
+      // Compute hashes
+      const keyHash = await sha256(key);
+      const numHash = await sha256(num);
 
-  // Convert hexadecimal hash values to BigInt for multiplication
-  const keyBigInt = BigInt('0x' + keyHash);
-  const numBigInt = BigInt('0x' + numHash);
+      // Convert hexadecimal hash values to BigInt for multiplication
+      const keyBigInt = BigInt('0x' + keyHash);
+      const numBigInt = BigInt('0x' + numHash);
 
-  // Multiply the two hashes
-  const multipliedHashBigInt = keyBigInt * numBigInt;
+      // Multiply the two hashes
+      const multipliedHashBigInt = keyBigInt * numBigInt;
 
-  // Take the hash of the result
-  const finalHash = await sha256(multipliedHashBigInt.toString());
+      // Take the hash of the result
+      const finalHash = await sha256(multipliedHashBigInt.toString());
 
-  console.log('Final Hash:', finalHash);
+      console.log('Final Hash:', finalHash);
 
-  // You can use `finalHash` for encryption logic
+      //`finalHash` is for encryption logic
 }
 
   // Function to handle Decrypt button click
