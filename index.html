@@ -93,17 +93,37 @@
 }
 
   // Function to handle Decrypt button click
-  function decrypt() {
-    const key = document.getElementById('key').value; // Get the encryption key
-    const num = document.getElementById('num').value; // Get the message number
-    const ciphertext = document.getElementById('ciphertext').value; // Get the ciphertext
+  async function decrypt() {
+  const key = document.getElementById('key').value; // Get the encryption key
+  const num = document.getElementById('num').value; // Get the message number
+  const ciphertext = document.getElementById('ciphertext').value; // Get the ciphertext
 
-    // Use the variables as needed
-    console.log('Key:', key);
-    console.log('Message Number:', num);
-    console.log('Ciphertext:', ciphertext);
-
-    // Add decryption logic here
+  // Helper function to compute SHA-256 hash
+  async function sha256(message) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
+
+  // Compute hashes
+  const keyHash = await sha256(key);
+  const numHash = await sha256(num);
+
+  // Convert hexadecimal hash values to BigInt for multiplication
+  const keyBigInt = BigInt('0x' + keyHash);
+  const numBigInt = BigInt('0x' + numHash);
+
+  // Multiply the two hashes
+  const multipliedHashBigInt = keyBigInt * numBigInt;
+
+  // Take the hash of the result
+  const finalHash = await sha256(multipliedHashBigInt.toString());
+
+  console.log('Final Hash for Decryption:', finalHash);
+
+  //use `finalHash` for decryption logic
+}
   </script>
 </html>
