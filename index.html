@@ -58,5 +58,32 @@
       const selectedTab = document.getElementById(tabId);
       selectedTab.classList.add('active');
     }
+  // Function to handle Encrypt button click
+  function encrypt() {
+    const key = document.getElementById('key').value; // Get the encryption key
+    const num = document.getElementById('num').value; // Get the message number
+    const plaintext = document.getElementById('plaintext').value; // Get the plaintext
+
+    // Use the variables as needed
+    console.log('Key:', key);
+    console.log('Message Number:', num);
+    console.log('Plaintext:', plaintext);
+
+    // Add encryption logic here
+  }
+
+  // Function to handle Decrypt button click
+  function decrypt() {
+    const key = document.getElementById('key').value; // Get the encryption key
+    const num = document.getElementById('num').value; // Get the message number
+    const ciphertext = document.getElementById('ciphertext').value; // Get the ciphertext
+
+    // Use the variables as needed
+    console.log('Key:', key);
+    console.log('Message Number:', num);
+    console.log('Ciphertext:', ciphertext);
+
+    // Add decryption logic here
+  }
   </script>
 </html>
