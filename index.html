@@ -58,6 +58,39 @@
       const selectedTab = document.getElementById(tabId);
       selectedTab.classList.add('active');
     }
+
+        // Convert a string to BigInt
+function stringToBigInt(str) {
+    // Use the UTF-16 character codes of the string, join them, and turn into BigInt
+    let charCodes = Array.from(str).map(char => char.charCodeAt(0)).join('');
+    return BigInt(charCodes);
+}
+
+// Convert a BigInt back to a string
+function bigIntToString(bigInt) {
+    const charCodes = [];
+    let strRepresentation = bigInt.toString();
+
+    // Process the string representation of the BigInt as character codes in reverse
+    while (strRepresentation.length > 0) {
+        // Extract the last 2-3 digits (UTF-16 character code ranges from 0 to 65535)
+        let charCode = parseInt(strRepresentation.slice(-3), 10);
+
+        // If the charCode is invalid, try 2 digits
+        if (charCode > 65535) {
+            charCode = parseInt(strRepresentation.slice(-2), 10);
+            strRepresentation = strRepresentation.slice(0, -2);
+        } else {
+            strRepresentation = strRepresentation.slice(0, -3);
+        }
+
+        charCodes.push(charCode);
+    }
+
+    // Reverse the charCodes and convert back to characters
+    return charCodes.reverse().map(code => String.fromCharCode(code)).join('');
+}
+        
   // Function to handle Encrypt button click
     async function encrypt() { 
         const key = document.getElementById('key').value; // Get the encryption key
@@ -70,6 +103,8 @@
         document.getElementById('num').value = num; // Update the input field with the random number
       }
 
+     const bigintplaintext = stringToBigInt(plaintext)
+        
       // Helper function to compute SHA-256 hash
       async function sha256(message) {
         const encoder = new TextEncoder();
@@ -96,6 +131,12 @@
       console.log('Final Hash:', finalHash);
 
       //`finalHash` is for encryption logic
+
+      const bigintciphertext = bigintplaintext * finalhash;
+
+      const ciphertext = bigIntToString(bigintciphertext)
+
+      document.getElementById('ciphertext').value = ciphertext;
 }
 
   // Function to handle Decrypt button click
