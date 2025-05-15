@@ -23,7 +23,7 @@
       }
 
       .tab-content.active {
-        display: block;  !important
+        display: block !important;
       }
     </style>
   </head>
@@ -44,7 +44,7 @@
     <div id="tab2" class="tab-content">
       Ciphertext:
       <textarea id="ciphertext"></textarea>
-      <button type="button" onclick="decrypt">Decrypt</button>
+      <button type="button" onclick="decrypt()">Decrypt</button>
     </div>
   </body>
   <script>
@@ -59,43 +59,58 @@
       selectedTab.classList.add('active');
     }
 
-        // Convert a string to BigInt
-function stringToBigInt(str) {
-    // Use the UTF-16 character codes of the string, join them, and turn into BigInt
-    let charCodes = Array.from(str).map(char => char.charCodeAt(0)).join('');
-    return BigInt(charCodes);
-}
+    // Convert a string to BigInt
+    function stringToBigInt(str) {
+      // Use the UTF-16 character codes of the string, join them, and turn into BigInt
+      let charCodes = Array.from(str).map(char => char.charCodeAt(0)).join('');
+      return BigInt(charCodes);
+    }
 
-// Convert a BigInt back to a string
-function bigIntToString(bigInt) {
-    const charCodes = [];
-    let strRepresentation = bigInt.toString();
+    // Convert a BigInt back to a string
+    function bigIntToString(bigInt) {
+      const charCodes = [];
+      let strRepresentation = bigInt.toString();
 
-    // Process the string representation of the BigInt as character codes in reverse
-    while (strRepresentation.length > 0) {
+      // Process the string representation of the BigInt as character codes in reverse
+      while (strRepresentation.length > 0) {
         // Extract the last 2-3 digits (UTF-16 character code ranges from 0 to 65535)
         let charCode = parseInt(strRepresentation.slice(-3), 10);
 
         // If the charCode is invalid, try 2 digits
         if (charCode > 65535) {
-            charCode = parseInt(strRepresentation.slice(-2), 10);
-            strRepresentation = strRepresentation.slice(0, -2);
+          charCode = parseInt(strRepresentation.slice(-2), 10);
+          strRepresentation = strRepresentation.slice(0, -2);
         } else {
-            strRepresentation = strRepresentation.slice(0, -3);
+          strRepresentation = strRepresentation.slice(0, -3);
         }
 
         charCodes.push(charCode);
+      }
+
+      // Reverse the charCodes and convert back to characters
+      return charCodes.reverse().map(code => String.fromCharCode(code)).join('');
     }
 
-    // Reverse the charCodes and convert back to characters
-    return charCodes.reverse().map(code => String.fromCharCode(code)).join('');
-}
-        
-  // Function to handle Encrypt button click
+    // Helper function to compute SHA-256 hash
+    async function sha256(message) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Function to handle Encrypt button click
     async function encrypt() { 
-        const key = document.getElementById('key').value; // Get the encryption key
+      const key = document.getElementById('key').value; // Get the encryption key
       let num = document.getElementById('num').value; // Get the message number
       const plaintext = document.getElementById('plaintext').value; // Get the plaintext
+
+      // Validate inputs
+      if (!key || !plaintext) {
+        alert("Please provide both an encryption key and plaintext.");
+        return;
+      }
 
       // Set the message number to a random number if it is 0 or not set
       if (!num || num === "0") {
@@ -103,16 +118,7 @@ function bigIntToString(bigInt) {
         document.getElementById('num').value = num; // Update the input field with the random number
       }
 
-     const bigintplaintext = stringToBigInt(plaintext)
-        
-      // Helper function to compute SHA-256 hash
-      async function sha256(message) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      }
+      const bigintplaintext = stringToBigInt(plaintext);
 
       // Compute hashes
       const keyHash = await sha256(key);
@@ -130,59 +136,55 @@ function bigIntToString(bigInt) {
 
       console.log('Final Hash:', finalHash);
 
-      //`finalHash` is for encryption logic
+      // `finalHash` is for encryption logic
+      const bigintciphertext = bigintplaintext * BigInt('0x' + finalHash);
 
-      const bigintciphertext = bigintplaintext * finalHash;
-
-      const ciphertext = bigIntToString(bigintciphertext)
+      const ciphertext = bigIntToString(bigintciphertext);
 
       document.getElementById('ciphertext').value = ciphertext;
 
-      showTabContent('tab2')
-}
+      showTabContent('tab2');
+    }
 
-  // Function to handle Decrypt button click
-  async function decrypt() {
-  const key = document.getElementById('key').value; // Get the encryption key
-  const num = document.getElementById('num').value; // Get the message number
-  const ciphertext = document.getElementById('ciphertext').value; // Get the ciphertext
+    // Function to handle Decrypt button click
+    async function decrypt() {
+      const key = document.getElementById('key').value; // Get the encryption key
+      const num = document.getElementById('num').value; // Get the message number
+      const ciphertext = document.getElementById('ciphertext').value; // Get the ciphertext
 
-  // Helper function to compute SHA-256 hash
-  async function sha256(message) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
+      // Validate inputs
+      if (!key || !ciphertext) {
+        alert("Please provide both an encryption key and ciphertext.");
+        return;
+      }
 
-  // Compute hashes
-  const keyHash = await sha256(key);
-  const numHash = await sha256(num);
+      // Compute hashes
+      const keyHash = await sha256(key);
+      const numHash = await sha256(num);
 
-  // Convert hexadecimal hash values to BigInt for multiplication
-  const keyBigInt = BigInt('0x' + keyHash);
-  const numBigInt = BigInt('0x' + numHash);
+      // Convert hexadecimal hash values to BigInt for multiplication
+      const keyBigInt = BigInt('0x' + keyHash);
+      const numBigInt = BigInt('0x' + numHash);
 
-  // Multiply the two hashes
-  const multipliedHashBigInt = keyBigInt * numBigInt;
+      // Multiply the two hashes
+      const multipliedHashBigInt = keyBigInt * numBigInt;
 
-  // Take the hash of the result
-  const finalHash = await sha256(multipliedHashBigInt.toString());
+      // Take the hash of the result
+      const finalHash = await sha256(multipliedHashBigInt.toString());
 
-  console.log('Final Hash for Decryption:', finalHash);
+      console.log('Final Hash for Decryption:', finalHash);
 
-  //use `finalHash` for decryption logic
+      // `finalHash` is for decryption logic
+      const bigintciphertext = stringToBigInt(ciphertext);
 
- const bigintciphertext = strToBigInt(ciphertext)
+      const bigintplaintext = bigintciphertext / BigInt('0x' + finalHash);
 
-    const bigintplaintext = bigintciphertext / finalHash
+      const plaintext = bigIntToString(bigintplaintext);
 
-    const plaintext = bigIntToString(bigintplaintext)
+      document.getElementById('plaintext').value = plaintext;
 
-    document.getElementById('plaintext').value = plaintext
-
-    showTabContent('tab1')
-}
+      showTabContent('tab1');
+    }
   </script>
 </html>
+
