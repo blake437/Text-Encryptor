@@ -175,6 +175,14 @@ function bigIntToString(bigInt) {
   //use `finalHash` for decryption logic
 
  const bigintciphertext = strToBigInt(ciphertext)
+
+    const bigintplaintext = bigintciphertext / finalHash
+
+    const plaintext = bigIntToString(bigintplaintext)
+
+    document.getElementById('plaintext').value = plaintext
+
+    showTabContent('tab1')
 }
   </script>
 </html>
