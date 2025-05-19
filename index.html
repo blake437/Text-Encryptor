@@ -47,134 +47,98 @@
       <button type="button" onclick="decrypt()">Decrypt</button>
     </div>
   </body>
-  <script>
-    // JavaScript to handle tab switching
-    function showTabContent(tabId) {
-      // Hide all tab content
-      const contents = document.querySelectorAll('.tab-content');
-      contents.forEach(content => content.classList.remove('active'));
-
-      // Show the selected tab content
-      const selectedTab = document.getElementById(tabId);
-      selectedTab.classList.add('active');
-    }
-
-     // Convert a string to BigInt using fixed-width (5 digits) encoding
-  function stringToBigInt(str) {
-    // Pad each char code to 5 digits to ensure unambiguous decoding
-    let charCodes = Array.from(str).map(char => char.charCodeAt(0).toString().padStart(5, '0')).join('');
-    return BigInt(charCodes);
+<script>
+  // Helper: Convert a string to ArrayBuffer
+  function strToBuf(str) {
+    return new TextEncoder().encode(str);
+  }
+  function bufToStr(buf) {
+    return new TextDecoder().decode(buf);
+  }
+  function bufToB64(buf) {
+    return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  }
+  function b64ToBuf(b64) {
+    return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   }
 
-  // Convert a BigInt back to a string, decoding in fixed-width (5 digits)
-  function bigIntToString(bigInt) {
-    let strRepresentation = bigInt.toString();
-    // Pad left if string length is not a multiple of 5
-    if (strRepresentation.length % 5 !== 0) {
-      strRepresentation = strRepresentation.padStart(Math.ceil(strRepresentation.length / 5) * 5, '0');
-    }
-    const charCodes = [];
-    for (let i = 0; i < strRepresentation.length; i += 5) {
-      let code = parseInt(strRepresentation.slice(i, i+5), 10);
-      charCodes.push(code);
-    }
-    return charCodes.map(code => String.fromCharCode(code)).join('');
+  // Helper: SHA-256 as hex string
+  async function sha256(message) {
+    const data = strToBuf(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-    // Helper function to compute SHA-256 hash
-    async function sha256(message) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(message);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  // Derive AES key from SHA-256 hex (finalHash)
+  async function hashToKey(hashHex) {
+    const raw = Uint8Array.from(hashHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+    return crypto.subtle.importKey(
+      "raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]
+    );
+  }
+
+  // Compute finalHash using your logic
+  async function getFinalHash(key, num) {
+    const keyHash = await sha256(key);
+    const numHash = await sha256(num);
+    const keyBigInt = BigInt('0x' + keyHash);
+    const numBigInt = BigInt('0x' + numHash);
+    const multiplied = keyBigInt * numBigInt;
+    return sha256(multiplied.toString());
+  }
+
+  async function encrypt() {
+    const keyStr = document.getElementById('key').value;
+    let num = document.getElementById('num').value;
+    const plaintext = document.getElementById('plaintext').value;
+    if (!keyStr || !plaintext) return alert("Provide key and plaintext.");
+
+    if (!num || num === "0") {
+      num = Math.floor(Math.random() * 1000000);
+      document.getElementById('num').value = num;
     }
 
-    // Function to handle Encrypt button click
-    async function encrypt() { 
-      const key = document.getElementById('key').value; // Get the encryption key
-      let num = document.getElementById('num').value; // Get the message number
-      const plaintext = document.getElementById('plaintext').value; // Get the plaintext
+    const finalHash = await getFinalHash(keyStr, num);
+    const aesKey = await hashToKey(finalHash);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ctBuf = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv }, aesKey, strToBuf(plaintext)
+    );
+    // Output: base64(iv + ciphertext)
+    const full = new Uint8Array([...iv, ...new Uint8Array(ctBuf)]);
+    document.getElementById('ciphertext').value = bufToB64(full);
+    showTabContent('tab2');
+  }
 
-      // Validate inputs
-      if (!key || !plaintext) {
-        alert("Please provide both an encryption key and plaintext.");
-        return;
-      }
+  async function decrypt() {
+    const keyStr = document.getElementById('key').value;
+    const num = document.getElementById('num').value;
+    const b64 = document.getElementById('ciphertext').value;
+    if (!keyStr || !num || !b64) return alert("Provide key, message number, and ciphertext.");
 
-      // Set the message number to a random number if it is 0 or not set
-      if (!num || num === "0") {
-        num = Math.floor(Math.random() * 1000000); // Generate a random number (e.g., between 0 and 999999)
-        document.getElementById('num').value = num; // Update the input field with the random number
-      }
+    const full = b64ToBuf(b64);
+    const iv = full.slice(0, 12);
+    const ct = full.slice(12);
+    const finalHash = await getFinalHash(keyStr, num);
+    const aesKey = await hashToKey(finalHash);
 
-      const bigintplaintext = stringToBigInt(plaintext);
-
-      // Compute hashes
-      const keyHash = await sha256(key);
-      const numHash = await sha256(num);
-
-      // Convert hexadecimal hash values to BigInt for multiplication
-      const keyBigInt = BigInt('0x' + keyHash);
-      const numBigInt = BigInt('0x' + numHash);
-
-      // Multiply the two hashes
-      const multipliedHashBigInt = keyBigInt * numBigInt;
-
-      // Take the hash of the result
-      const finalHash = await sha256(multipliedHashBigInt.toString());
-
-      console.log('Final Hash:', finalHash);
-
-      // `finalHash` is for encryption logic
-      const bigintciphertext = bigintplaintext * BigInt('0x' + finalHash);
-
-      const ciphertext = bigIntToString(bigintciphertext);
-
-      document.getElementById('ciphertext').value = ciphertext;
-
-      showTabContent('tab2');
-    }
-
-    // Function to handle Decrypt button click
-    async function decrypt() {
-      const key = document.getElementById('key').value; // Get the encryption key
-      const num = document.getElementById('num').value; // Get the message number
-      const ciphertext = document.getElementById('ciphertext').value; // Get the ciphertext
-
-      // Validate inputs
-      if (!key || !ciphertext) {
-        alert("Please provide both an encryption key and ciphertext.");
-        return;
-      }
-
-      // Compute hashes
-      const keyHash = await sha256(key);
-      const numHash = await sha256(num);
-
-      // Convert hexadecimal hash values to BigInt for multiplication
-      const keyBigInt = BigInt('0x' + keyHash);
-      const numBigInt = BigInt('0x' + numHash);
-
-      // Multiply the two hashes
-      const multipliedHashBigInt = keyBigInt * numBigInt;
-
-      // Take the hash of the result
-      const finalHash = await sha256(multipliedHashBigInt.toString());
-
-      console.log('Final Hash for Decryption:', finalHash);
-
-      // `finalHash` is for decryption logic
-      const bigintciphertext = stringToBigInt(ciphertext);
-
-      const bigintplaintext = bigintciphertext / BigInt('0x' + finalHash);
-
-      const plaintext = bigIntToString(bigintplaintext);
-
-      document.getElementById('plaintext').value = plaintext;
-
+    try {
+      const ptBuf = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv }, aesKey, ct
+      );
+      document.getElementById('plaintext').value = bufToStr(ptBuf);
       showTabContent('tab1');
+    } catch {
+      alert("Decryption failed! (wrong key/message number or data corrupted)");
     }
-  </script>
+  }
+
+  // Tab logic (unchanged)
+  function showTabContent(tabId) {
+    document.querySelectorAll('.tab-content').forEach(
+      c => c.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+  }
+</script>
 </html>
 
