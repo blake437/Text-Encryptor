@@ -59,37 +59,27 @@
       selectedTab.classList.add('active');
     }
 
-    // Convert a string to BigInt
-    function stringToBigInt(str) {
-      // Use the UTF-16 character codes of the string, join them, and turn into BigInt
-      let charCodes = Array.from(str).map(char => char.charCodeAt(0)).join('');
-      return BigInt(charCodes);
+     // Convert a string to BigInt using fixed-width (5 digits) encoding
+  function stringToBigInt(str) {
+    // Pad each char code to 5 digits to ensure unambiguous decoding
+    let charCodes = Array.from(str).map(char => char.charCodeAt(0).toString().padStart(5, '0')).join('');
+    return BigInt(charCodes);
+  }
+
+  // Convert a BigInt back to a string, decoding in fixed-width (5 digits)
+  function bigIntToString(bigInt) {
+    let strRepresentation = bigInt.toString();
+    // Pad left if string length is not a multiple of 5
+    if (strRepresentation.length % 5 !== 0) {
+      strRepresentation = strRepresentation.padStart(Math.ceil(strRepresentation.length / 5) * 5, '0');
     }
-
-    // Convert a BigInt back to a string
-    function bigIntToString(bigInt) {
-      const charCodes = [];
-      let strRepresentation = bigInt.toString();
-
-      // Process the string representation of the BigInt as character codes in reverse
-      while (strRepresentation.length > 0) {
-        // Extract the last 2-3 digits (UTF-16 character code ranges from 0 to 65535)
-        let charCode = parseInt(strRepresentation.slice(-3), 10);
-
-        // If the charCode is invalid, try 2 digits
-        if (charCode > 65535) {
-          charCode = parseInt(strRepresentation.slice(-2), 10);
-          strRepresentation = strRepresentation.slice(0, -2);
-        } else {
-          strRepresentation = strRepresentation.slice(0, -3);
-        }
-
-        charCodes.push(charCode);
-      }
-
-      // Reverse the charCodes and convert back to characters
-      return charCodes.reverse().map(code => String.fromCharCode(code)).join('');
+    const charCodes = [];
+    for (let i = 0; i < strRepresentation.length; i += 5) {
+      let code = parseInt(strRepresentation.slice(i, i+5), 10);
+      charCodes.push(code);
     }
+    return charCodes.map(code => String.fromCharCode(code)).join('');
+  }
 
     // Helper function to compute SHA-256 hash
     async function sha256(message) {
