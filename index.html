@@ -271,6 +271,7 @@ button:hover, button:focus {
   }
 }
     </style>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   </head>
   <body>
     <div class="above-tabs">
@@ -331,16 +332,16 @@ async function getFinalHash(key, num) {
 }
 function getFileTypeIcon(fileName) {
   const ext = fileName.split('.').pop().toLowerCase();
-  if (['jpg','jpeg','png','gif','bmp','svg','webp'].includes(ext)) return '🖼️';
-  if (['pdf'].includes(ext)) return '📄';
-  if (['doc','docx'].includes(ext)) return '📝';
-  if (['xls','xlsx','csv'].includes(ext)) return '📊';
-  if (['ppt','pptx'].includes(ext)) return '📊';
-  if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜️';
-  if (['mp3','wav','ogg','m4a'].includes(ext)) return '🎵';
-  if (['mp4','avi','mov','mkv'].includes(ext)) return '🎬';
-  if (['txt','md','rtf','json','log'].includes(ext)) return '📃';
-  return '📁';
+  if (['jpg','jpeg','png','gif','bmp','svg','webp'].includes(ext)) return '<i class="fa-regular fa-image"></i>';
+  if (['pdf'].includes(ext)) return '<i class="fa-regular fa-file-pdf"></i>';
+  if (['doc','docx'].includes(ext)) return '<i class="fa-regular fa-file-word"></i>';
+  if (['xls','xlsx','csv'].includes(ext)) return '<i class="fa-regular fa-file-excel"></i>';
+  if (['ppt','pptx'].includes(ext)) return '<i class="fa-regular fa-file-powerpoint"></i>';
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return '<i class="fa-regular fa-file-zipper"></i>';
+  if (['mp3','wav','ogg','m4a'].includes(ext)) return '<i class="fa-regular fa-file-audio"></i>';
+  if (['mp4','avi','mov','mkv'].includes(ext)) return '<i class="fa-regular fa-file-video"></i>';
+  if (['txt','md','rtf','json','log'].includes(ext)) return '<i class="fa-regular fa-file-lines"></i>';
+  return '<i class="fa-regular fa-file"></i>';
 }
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -403,7 +404,7 @@ function updateFileLists() {
       li.className = "file-pill";
       const icon = document.createElement('span');
       icon.className = "file-icon";
-      icon.textContent = getFileTypeIcon(f.name);
+      icon.innerHTML = getFileTypeIcon(f.name);
       const title = document.createElement('span');
       title.className = "file-title";
       title.textContent = f.name;
@@ -412,7 +413,7 @@ function updateFileLists() {
       const downloadBtn = document.createElement('button');
       downloadBtn.type = "button";
       downloadBtn.title = "Download";
-      downloadBtn.innerHTML = "⬇️";
+      downloadBtn.innerHTML = '<i class="fa-solid fa-download"></i>';
       downloadBtn.onclick = function() {
         const blob = new Blob([f.file], {type: f.file.type});
         const url = URL.createObjectURL(blob);
@@ -430,7 +431,7 @@ function updateFileLists() {
       removeBtn.type = "button";
       removeBtn.title = "Remove";
       removeBtn.className = "remove-btn";
-      removeBtn.innerHTML = "🗑️";
+      removeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
       removeBtn.onclick = function() {
         attachedFiles.splice(i, 1);
         attachedFileObjs.splice(i, 1);
