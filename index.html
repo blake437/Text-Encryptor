@@ -156,6 +156,21 @@ button:hover, button:focus {
   background: #005fa3;
 }
 
+.file-list {
+  margin: 8px 0 14px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.file-list li {
+  margin: 0 0 3px 0;
+  padding: 2px 0 2px 16px;
+  background: url('data:image/svg+xml;utf8,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="5" fill="%2388c" /></svg>') 0 6px no-repeat;
+  background-size: 10px 10px;
+  color: #444;
+  word-break: break-all;
+}
+
 @media (max-width: 600px) {
   .tab-content {
     padding: 16px 4vw;
@@ -193,9 +208,10 @@ button:hover, button:focus {
       Plaintext:
       <textarea id="plaintext"></textarea>
       <button type="button" onclick="encrypt()">Encrypt</button>
-      <input type="file" id="fileInput" style="display:none" />
-      <button type="button" onclick="document.getElementById('fileInput').click()">Attach File</button>
-      <button type="button" id="downloadAttachedBtn" style="display:none" onclick="downloadAttachedFile()">Download Attached File</button>
+      <input type="file" id="fileInput" style="display:none" multiple />
+      <button type="button" onclick="document.getElementById('fileInput').click()">Attach File(s)</button>
+      <ul class="file-list" id="attachedFilesList"></ul>
+      <button type="button" id="downloadAttachedBtn" style="display:none" onclick="downloadAttachedFile()">Download Attached File(s)</button>
     </div>
     <div id="tab2" class="tab-content">
       Ciphertext:
@@ -237,21 +253,27 @@ button:hover, button:focus {
     return sha256(multiplied.toString());
   }
 
-  let attachedFile = null;
-  let attachedFilename = "";
-  let lastDecryptedFile = null;
-  let lastDecryptedFilename = "";
+  let attachedFiles = [];
+  let lastDecryptedFiles = [];
 
   document.getElementById('fileInput').addEventListener('change', function(evt) {
-    if (evt.target.files.length > 0) {
-      attachedFile = evt.target.files[0];
-      attachedFilename = attachedFile.name;
-      document.getElementById('downloadAttachedBtn').style.display = "none";
-    } else {
-      attachedFile = null;
-      attachedFilename = "";
-    }
+    const files = Array.from(evt.target.files);
+    attachedFiles = files;
+    updateAttachedFilesList();
+    document.getElementById('downloadAttachedBtn').style.display = "none";
   });
+
+  function updateAttachedFilesList() {
+    const list = document.getElementById('attachedFilesList');
+    list.innerHTML = "";
+    if (attachedFiles.length > 0) {
+      attachedFiles.forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = f.name;
+        list.appendChild(li);
+      });
+    }
+  }
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -281,12 +303,18 @@ button:hover, button:focus {
       document.getElementById('num').value = num;
     }
     let envelope = null;
-    if (attachedFile) {
-      const fileDataB64 = await fileToBase64(attachedFile);
+    if (attachedFiles.length > 0) {
+      const filesArr = [];
+      for (const file of attachedFiles) {
+        const fileDataB64 = await fileToBase64(file);
+        filesArr.push({
+          n: file.name,
+          d: fileDataB64
+        });
+      }
       envelope = JSON.stringify({
         t: plaintext,
-        f: attachedFilename,
-        d: fileDataB64
+        files: filesArr
       });
     } else {
       envelope = JSON.stringify({ t: plaintext });
@@ -299,8 +327,8 @@ button:hover, button:focus {
     );
     const full = new Uint8Array([...iv, ...new Uint8Array(ctBuf)]);
     document.getElementById('ciphertext').value = bufToB64(full);
-    attachedFile = null;
-    attachedFilename = "";
+    attachedFiles = [];
+    updateAttachedFilesList();
     document.getElementById('fileInput').value = "";
     document.getElementById('downloadAttachedBtn').style.display = "none";
     showTabContent('tab2');
@@ -328,14 +356,16 @@ button:hover, button:focus {
         throw new Error('Corrupted decrypted data');
       }
       document.getElementById('plaintext').value = envelope.t || "";
-      if (envelope.f && envelope.d) {
-        lastDecryptedFile = base64ToUint8Array(envelope.d);
-        lastDecryptedFilename = envelope.f;
+      lastDecryptedFiles = [];
+      if (envelope.files && Array.isArray(envelope.files) && envelope.files.length > 0) {
+        lastDecryptedFiles = envelope.files.map(f => ({
+          name: f.n,
+          data: base64ToUint8Array(f.d)
+        }));
         document.getElementById('downloadAttachedBtn').style.display = "inline";
       } else {
-        lastDecryptedFile = null;
-        lastDecryptedFilename = "";
         document.getElementById('downloadAttachedBtn').style.display = "none";
+        lastDecryptedFiles = [];
       }
       showTabContent('tab1');
     } catch {
@@ -344,18 +374,44 @@ button:hover, button:focus {
   }
 
   function downloadAttachedFile() {
-    if (!lastDecryptedFile || !lastDecryptedFilename) return;
-    const blob = new Blob([lastDecryptedFile]);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = lastDecryptedFilename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
+    if (!lastDecryptedFiles.length) return;
+    if (lastDecryptedFiles.length === 1) {
+      const blob = new Blob([lastDecryptedFiles[0].data]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = lastDecryptedFiles[0].name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } else {
+      const zipName = "attachments.zip";
+      createAndDownloadZip(lastDecryptedFiles, zipName);
+    }
+  }
+
+  function createAndDownloadZip(files, zipName) {
+    if (typeof JSZip === "undefined") {
+      alert("Multiple file download requires JSZip library.");
+      return;
+    }
+    const zip = new JSZip();
+    files.forEach(f => zip.file(f.name, f.data));
+    zip.generateAsync({ type: "blob" }).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = zipName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    });
   }
 
   function showTabContent(tabId) {
@@ -370,4 +426,5 @@ button:hover, button:focus {
     }
   }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </html>
