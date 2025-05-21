@@ -1,19 +1,18 @@
 <html>
   <head>
-    <style>body {
+    <style>
+body {
   font-family: 'Segoe UI', Arial, sans-serif;
   background: #f4f8fb;
   margin: 0;
   padding: 0;
   min-height: 100vh;
 }
-
 #tabs {
   display: flex;
   justify-content: center;
   margin: 24px 0 0 0;
 }
-
 .tab {
   background: #f7f7f7;
   border: 1px solid #bbb;
@@ -30,7 +29,6 @@
   transition: background 0.2s, font-weight 0.2s;
   color: #555;
 }
-
 .tab.active {
   background: #fff;
   font-weight: bold;
@@ -38,11 +36,9 @@
   z-index: 1;
   color: #222;
 }
-
 .tab:not(.active):hover {
   background: #ececec;
 }
-
 .tab-content {
   display: none;
   border: 1px solid #ccc;
@@ -54,11 +50,9 @@
   box-shadow: 0 2px 16px 0 rgba(0,0,0,0.06);
   font-size: 15px;
 }
-
 .tab-content.active {
   display: block !important;
 }
-
 .above-tabs {
   display: flex;
   justify-content: center;
@@ -74,7 +68,6 @@
   position: relative;
   top: 24px;
 }
-
 .above-tabs input[type="text"], 
 .above-tabs input[type="number"] {
   width: 180px;
@@ -86,13 +79,11 @@
   background-color: #f9f9f9;
   transition: border-color 0.2s;
 }
-
 .above-tabs input[type="text"]:focus, 
 .above-tabs input[type="number"]:focus {
   outline: none;
   border-color: #0078d7;
 }
-
 .above-tabs button {
   background: #f7f7f7;
   color: #555;
@@ -104,13 +95,11 @@
   box-shadow: 0 4px 12px 0 rgba(0,0,0,0.06);
   transition: background 0.2s, color 0.2s, border 0.2s;
 }
-
 .above-tabs button:hover, .above-tabs button:focus {
   background: #ececec;
   color: #222;
   border-color: #888;
 }
-
 input[type="text"], input[type="number"] {
   width: 220px;
   padding: 7px 12px;
@@ -121,12 +110,10 @@ input[type="text"], input[type="number"] {
   background-color: #f9f9f9;
   transition: border-color 0.2s;
 }
-
 input[type="text"]:focus, input[type="number"]:focus {
   outline: none;
   border-color: #0078d7;
 }
-
 textarea {
   width: 100%;
   min-height: 80px;
@@ -138,7 +125,6 @@ textarea {
   background: #f9f9f9;
   resize: vertical;
 }
-
 button {
   padding: 8px 20px;
   margin: 0 8px 10px 0;
@@ -151,26 +137,84 @@ button {
   transition: background 0.18s;
   box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04);
 }
-
 button:hover, button:focus {
   background: #005fa3;
 }
 
+/* New file pills style */
 .file-list {
   margin: 8px 0 14px 0;
   padding: 0;
   list-style: none;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.file-list li {
-  margin: 0 0 3px 0;
-  padding: 2px 0 2px 16px;
-  background: url('data:image/svg+xml;utf8,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="5" fill="%2388c" /></svg>') 0 6px no-repeat;
-  background-size: 10px 10px;
-  color: #444;
-  word-break: break-all;
+.file-pill {
+  display: flex;
+  align-items: center;
+  background: #e6eaf3;
+  border-radius: 24px;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.05);
+  padding: 8px 16px 8px 10px;
+  min-height: 40px;
+  min-width: 0;
+  transition: box-shadow 0.15s;
+  gap: 14px;
 }
-
+.file-pill .file-icon {
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #d5daf5;
+  border-radius: 50%;
+  font-size: 17px;
+  margin-right: 6px;
+}
+.file-pill .file-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  color: #27304e;
+  margin-right: 16px;
+  margin-left: 0;
+}
+.file-pill .file-actions {
+  display: flex;
+  gap: 6px;
+}
+.file-pill button {
+  background: #fff;
+  color: #3b4d77;
+  border: 1px solid #b7bedb;
+  border-radius: 8px;
+  font-size: 14px;
+  padding: 5px 9px;
+  box-shadow: none;
+  margin: 0;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+.file-pill button:hover, .file-pill button:focus {
+  background: #f0f2fa;
+  border-color: #7a8bd6;
+  color: #2244c7;
+}
+.file-pill .remove-btn {
+  color: #a22e2e;
+  border-color: #e3b7b7;
+}
+.file-pill .remove-btn:hover, .file-pill .remove-btn:focus {
+  color: #fff;
+  background: #e55a5a;
+  border-color: #d22;
+}
 @media (max-width: 600px) {
   .tab-content {
     padding: 16px 4vw;
@@ -220,14 +264,17 @@ button:hover, button:focus {
     </div>
   </body>
 <script>
-  showTabContent('tab1')
-document.getElementById('newMessageBtn').addEventListener('click', function() {
-    document.getElementById('message').value = '';
-    let fileInput = document.getElementById('fileInput');
-    if(fileInput) fileInput.value = '';
-    let msgNum = Math.floor(Math.random() * 900000) + 100000;
-    document.getElementById('messageNum').value = msgNum;
-});
+  showTabContent('tab1');
+  document.getElementById('newMessageBtn').addEventListener('click', function() {
+      document.getElementById('plaintext').value = '';
+      let fileInput = document.getElementById('fileInput');
+      if(fileInput) fileInput.value = '';
+      attachedFiles = [];
+      updateAttachedFilesList();
+      let msgNum = Math.floor(Math.random() * 900000) + 100000;
+      document.getElementById('num').value = msgNum;
+  });
+
   function strToBuf(str) {
     return new TextEncoder().encode(str);
   }
@@ -270,13 +317,74 @@ document.getElementById('newMessageBtn').addEventListener('click', function() {
     document.getElementById('downloadAttachedBtn').style.display = "none";
   });
 
+  function getFileTypeIcon(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','bmp','svg','webp'].includes(ext)) return '🖼️';
+    if (['pdf'].includes(ext)) return '📄';
+    if (['doc','docx'].includes(ext)) return '📝';
+    if (['xls','xlsx','csv'].includes(ext)) return '📊';
+    if (['ppt','pptx'].includes(ext)) return '📊';
+    if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜️';
+    if (['mp3','wav','ogg','m4a'].includes(ext)) return '🎵';
+    if (['mp4','avi','mov','mkv'].includes(ext)) return '🎬';
+    if (['txt','md','rtf','json','log'].includes(ext)) return '📃';
+    return '📁';
+  }
+
   function updateAttachedFilesList() {
     const list = document.getElementById('attachedFilesList');
     list.innerHTML = "";
     if (attachedFiles.length > 0) {
-      attachedFiles.forEach(f => {
+      attachedFiles.forEach((f, i) => {
         const li = document.createElement('li');
-        li.textContent = f.name;
+        li.className = "file-pill";
+
+        const icon = document.createElement('span');
+        icon.className = "file-icon";
+        icon.textContent = getFileTypeIcon(f.name);
+
+        const title = document.createElement('span');
+        title.className = "file-title";
+        title.textContent = f.name;
+
+        const actions = document.createElement('span');
+        actions.className = "file-actions";
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.type = "button";
+        downloadBtn.title = "Download";
+        downloadBtn.innerHTML = "⬇️";
+        downloadBtn.onclick = function() {
+          const blob = new Blob([f], {type: f.type});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = f.name;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 100);
+        };
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = "button";
+        removeBtn.title = "Remove";
+        removeBtn.className = "remove-btn";
+        removeBtn.innerHTML = "🗑️";
+        removeBtn.onclick = function() {
+          attachedFiles.splice(i, 1);
+          updateAttachedFilesList();
+        };
+
+        actions.appendChild(downloadBtn);
+        actions.appendChild(removeBtn);
+
+        li.appendChild(icon);
+        li.appendChild(title);
+        li.appendChild(actions);
+
         list.appendChild(li);
       });
     }
@@ -420,7 +528,7 @@ document.getElementById('newMessageBtn').addEventListener('click', function() {
       }, 100);
     });
   }
-
+  
   function showTabContent(tabId) {
     document.querySelectorAll('.tab-content').forEach(
       c => c.classList.remove('active'));
