@@ -11,7 +11,26 @@ body {
 #tabs {
   display: flex;
   justify-content: center;
-  margin: 24px 0 0 0;
+  margin: -28px 0 0 0;  /* negative top margin to overlap above-tabs */
+  position: relative;
+  z-index: 2;
+}
+
+.above-tabs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f7f7f7;
+  border: 1px solid #bbb;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 4px 12px 0 rgba(0,0,0,0.06);
+  padding: 10px 24px 38px 24px; /* increased bottom padding for space under */
+  margin: 32px auto 0 auto;
+  max-width: 480px;
+  gap: 14px;
+  position: relative;
+  top: 24px;
+  z-index: 1;
 }
 .tab {
   background: #f7f7f7;
@@ -52,21 +71,7 @@ body {
 .tab-content.active {
   display: block !important;
 }
-.above-tabs {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f7f7f7;
-  border: 1px solid #bbb;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 4px 12px 0 rgba(0,0,0,0.06);
-  padding: 10px 24px 10px 24px;
-  margin: 32px auto 0 auto;
-  max-width: 480px;
-  gap: 14px;
-  position: relative;
-  top: 24px;
-}
+
 .above-tabs input[type="text"], 
 .above-tabs input[type="number"] {
   width: 180px;
