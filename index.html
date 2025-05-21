@@ -1,43 +1,118 @@
 <html>
   <head>
-    <style>
-      .tab {
+    <style>body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f4f8fb;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+#tabs {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0 0 0;
+}
+
+.tab {
   background: #f7f7f7;
   border: 1px solid #bbb;
   border-bottom: none;
   border-radius: 8px 8px 0 0;
-  padding: 8px 28px;
-  margin-right: 4px;
-  font-family: sans-serif;
-  font-size: 15px;
-  box-shadow: 0 2px 4px 0 rgba(0,0,0,0.04);
+  padding: 10px 38px;
+  margin-right: 8px;
+  font-family: inherit;
+  font-size: 16px;
+  box-shadow: 0 4px 12px 0 rgba(0,0,0,0.06);
   cursor: pointer;
   position: relative;
   top: 1px;
-  transition: background 0.2s;
+  transition: background 0.2s, font-weight 0.2s;
+  color: #555;
 }
-#tabs {
-  display: flex;
-  flex-direction: row;
-  margin-bottom: -1px;
-}
+
 .tab.active {
   background: #fff;
   font-weight: bold;
   border-color: #888 #888 #fff #888;
   z-index: 1;
+  color: #222;
 }
+
 .tab:not(.active):hover {
   background: #ececec;
 }
+
 .tab-content {
   display: none;
   border: 1px solid #ccc;
-  padding: 15px;
-  margin-top: 10px;
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  padding: 28px 32px 24px 32px;
+  margin: 0 auto 32px auto;
+  max-width: 480px;
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.06);
+  font-size: 15px;
 }
+
 .tab-content.active {
   display: block !important;
+}
+
+input[type="text"], input[type="number"] {
+  width: 220px;
+  padding: 7px 12px;
+  font-size: 15px;
+  margin: 24px 12px 8px 0;
+  border: 1px solid #b0b0b0;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus, input[type="number"]:focus {
+  outline: none;
+  border-color: #0078d7;
+}
+
+textarea {
+  width: 100%;
+  min-height: 80px;
+  margin: 10px 0 18px 0;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #b0b0b0;
+  font-size: 15px;
+  background: #f9f9f9;
+  resize: vertical;
+}
+
+button {
+  padding: 8px 20px;
+  margin: 0 8px 10px 0;
+  background: #0078d7;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.18s;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.04);
+}
+
+button:hover, button:focus {
+  background: #005fa3;
+}
+
+@media (max-width: 600px) {
+  .tab-content {
+    padding: 16px 4vw;
+    max-width: 98vw;
+  }
+  input[type="text"], input[type="number"] {
+    width: 96vw;
+    max-width: 98vw;
+  }
 }
     </style>
   </head>
