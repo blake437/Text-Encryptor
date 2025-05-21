@@ -20,7 +20,6 @@ body {
   border-radius: 8px 8px 0 0;
   padding: 10px 38px;
   margin-right: 8px;
-  font-family: inherit;
   font-size: 16px;
   box-shadow: 0 4px 12px 0 rgba(0,0,0,0.06);
   cursor: pointer;
@@ -140,8 +139,14 @@ button {
 button:hover, button:focus {
   background: #005fa3;
 }
-
-/* New file pills style */
+.file-section-label {
+  font-weight: bold;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  color: #27304e;
+  font-size: 15px;
+  display: block;
+}
 .file-list {
   margin: 8px 0 14px 0;
   padding: 0;
@@ -254,8 +259,8 @@ button:hover, button:focus {
       <button type="button" onclick="encrypt()">Encrypt</button>
       <input type="file" id="fileInput" style="display:none" multiple />
       <button type="button" onclick="document.getElementById('fileInput').click()">Attach File(s)</button>
-      <ul class="file-list" id="attachedFilesList"></ul>
-      <button type="button" id="downloadAttachedBtn" style="display:none" onclick="downloadAttachedFile()">Download Attached File(s)</button>
+      <div id="fileListsContainer"></div>
+      <button type="button" id="downloadAllBtn" style="display:none" onclick="downloadAllFiles()">Download All Files</button>
     </div>
     <div id="tab2" class="tab-content">
       Ciphertext:
@@ -264,262 +269,310 @@ button:hover, button:focus {
     </div>
   </body>
 <script>
-  showTabContent('tab1');
-  document.getElementById('newMessageBtn').addEventListener('click', function() {
-      document.getElementById('plaintext').value = '';
-      let fileInput = document.getElementById('fileInput');
-      if(fileInput) fileInput.value = '';
-      attachedFiles = [];
-      updateAttachedFilesList();
-      let msgNum = Math.floor(Math.random() * 900000) + 100000;
-      document.getElementById('num').value = msgNum;
+function strToBuf(str) {
+  return new TextEncoder().encode(str);
+}
+function bufToStr(buf) {
+  return new TextDecoder().decode(buf);
+}
+function bufToB64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function b64ToBuf(b64) {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+async function sha256(message) {
+  const data = strToBuf(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function hashToKey(hashHex) {
+  const raw = Uint8Array.from(hashHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+  return crypto.subtle.importKey(
+    "raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]
+  );
+}
+async function getFinalHash(key, num) {
+  const keyHash = await sha256(key);
+  const numHash = await sha256(num);
+  const keyBigInt = BigInt('0x' + keyHash);
+  const numBigInt = BigInt('0x' + numHash);
+  const multiplied = keyBigInt * numBigInt;
+  return sha256(multiplied.toString());
+}
+function getFileTypeIcon(fileName) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  if (['jpg','jpeg','png','gif','bmp','svg','webp'].includes(ext)) return '🖼️';
+  if (['pdf'].includes(ext)) return '📄';
+  if (['doc','docx'].includes(ext)) return '📝';
+  if (['xls','xlsx','csv'].includes(ext)) return '📊';
+  if (['ppt','pptx'].includes(ext)) return '📊';
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜️';
+  if (['mp3','wav','ogg','m4a'].includes(ext)) return '🎵';
+  if (['mp4','avi','mov','mkv'].includes(ext)) return '🎬';
+  if (['txt','md','rtf','json','log'].includes(ext)) return '📃';
+  return '📁';
+}
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(btoa(e.target.result));
+    reader.onerror = reject;
+    reader.readAsBinaryString(file);
   });
-
-  function strToBuf(str) {
-    return new TextEncoder().encode(str);
+}
+function base64ToUint8Array(b64) {
+  var binary = atob(b64);
+  var len = binary.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
-  function bufToStr(buf) {
-    return new TextDecoder().decode(buf);
+  return bytes;
+}
+let attachedFiles = [];
+let attachedFileObjs = [];
+let lastDecryptedFiles = [];
+document.getElementById('fileInput').addEventListener('change', function(evt) {
+  attachedFileObjs = Array.from(evt.target.files);
+  attachedFiles = [];
+  for (let f of attachedFileObjs) {
+    attachedFiles.push({ name: f.name, file: f });
   }
-  function bufToB64(buf) {
-    return btoa(String.fromCharCode(...new Uint8Array(buf)));
-  }
-  function b64ToBuf(b64) {
-    return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-  }
-  async function sha256(message) {
-    const data = strToBuf(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-  async function hashToKey(hashHex) {
-    const raw = Uint8Array.from(hashHex.match(/.{2}/g).map(b => parseInt(b, 16)));
-    return crypto.subtle.importKey(
-      "raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]
-    );
-  }
-  async function getFinalHash(key, num) {
-    const keyHash = await sha256(key);
-    const numHash = await sha256(num);
-    const keyBigInt = BigInt('0x' + keyHash);
-    const numBigInt = BigInt('0x' + numHash);
-    const multiplied = keyBigInt * numBigInt;
-    return sha256(multiplied.toString());
-  }
-
-  let attachedFiles = [];
-  let lastDecryptedFiles = [];
-
-  document.getElementById('fileInput').addEventListener('change', function(evt) {
-    const files = Array.from(evt.target.files);
-    attachedFiles = files;
-    updateAttachedFilesList();
-    document.getElementById('downloadAttachedBtn').style.display = "none";
-  });
-
-  function getFileTypeIcon(fileName) {
-    const ext = fileName.split('.').pop().toLowerCase();
-    if (['jpg','jpeg','png','gif','bmp','svg','webp'].includes(ext)) return '🖼️';
-    if (['pdf'].includes(ext)) return '📄';
-    if (['doc','docx'].includes(ext)) return '📝';
-    if (['xls','xlsx','csv'].includes(ext)) return '📊';
-    if (['ppt','pptx'].includes(ext)) return '📊';
-    if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜️';
-    if (['mp3','wav','ogg','m4a'].includes(ext)) return '🎵';
-    if (['mp4','avi','mov','mkv'].includes(ext)) return '🎬';
-    if (['txt','md','rtf','json','log'].includes(ext)) return '📃';
-    return '📁';
-  }
-
-  function updateAttachedFilesList() {
-    const list = document.getElementById('attachedFilesList');
-    list.innerHTML = "";
-    if (attachedFiles.length > 0) {
-      attachedFiles.forEach((f, i) => {
-        const li = document.createElement('li');
-        li.className = "file-pill";
-
-        const icon = document.createElement('span');
-        icon.className = "file-icon";
-        icon.textContent = getFileTypeIcon(f.name);
-
-        const title = document.createElement('span');
-        title.className = "file-title";
-        title.textContent = f.name;
-
-        const actions = document.createElement('span');
-        actions.className = "file-actions";
-
-        const downloadBtn = document.createElement('button');
-        downloadBtn.type = "button";
-        downloadBtn.title = "Download";
-        downloadBtn.innerHTML = "⬇️";
-        downloadBtn.onclick = function() {
-          const blob = new Blob([f], {type: f.type});
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = f.name;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }, 100);
-        };
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = "button";
-        removeBtn.title = "Remove";
-        removeBtn.className = "remove-btn";
-        removeBtn.innerHTML = "🗑️";
-        removeBtn.onclick = function() {
-          attachedFiles.splice(i, 1);
-          updateAttachedFilesList();
-        };
-
-        actions.appendChild(downloadBtn);
-        actions.appendChild(removeBtn);
-
-        li.appendChild(icon);
-        li.appendChild(title);
-        li.appendChild(actions);
-
-        list.appendChild(li);
-      });
-    }
-  }
-
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = e => resolve(btoa(e.target.result));
-      reader.onerror = reject;
-      reader.readAsBinaryString(file);
+  lastDecryptedFiles = [];
+  updateFileLists();
+  updateDownloadAllBtn();
+});
+document.getElementById('newMessageBtn').addEventListener('click', function() {
+  document.getElementById('plaintext').value = '';
+  let fileInput = document.getElementById('fileInput');
+  if(fileInput) fileInput.value = '';
+  attachedFiles = [];
+  attachedFileObjs = [];
+  lastDecryptedFiles = [];
+  updateFileLists();
+  updateDownloadAllBtn();
+  let msgNum = Math.floor(Math.random() * 900000) + 100000;
+  document.getElementById('num').value = msgNum;
+});
+function updateDownloadAllBtn() {
+  let show = (attachedFiles.length > 0 || lastDecryptedFiles.length > 0);
+  document.getElementById('downloadAllBtn').style.display = show ? "inline" : "none";
+}
+function updateFileLists() {
+  const container = document.getElementById('fileListsContainer');
+  container.innerHTML = "";
+  if (attachedFiles.length > 0) {
+    const label = document.createElement('span');
+    label.className = "file-section-label";
+    label.textContent = "Files to Encrypt:";
+    container.appendChild(label);
+    const list = document.createElement('ul');
+    list.className = "file-list";
+    attachedFiles.forEach((f, i) => {
+      const li = document.createElement('li');
+      li.className = "file-pill";
+      const icon = document.createElement('span');
+      icon.className = "file-icon";
+      icon.textContent = getFileTypeIcon(f.name);
+      const title = document.createElement('span');
+      title.className = "file-title";
+      title.textContent = f.name;
+      const actions = document.createElement('span');
+      actions.className = "file-actions";
+      const downloadBtn = document.createElement('button');
+      downloadBtn.type = "button";
+      downloadBtn.title = "Download";
+      downloadBtn.innerHTML = "⬇️";
+      downloadBtn.onclick = function() {
+        const blob = new Blob([f.file], {type: f.file.type});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = f.name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+      };
+      const removeBtn = document.createElement('button');
+      removeBtn.type = "button";
+      removeBtn.title = "Remove";
+      removeBtn.className = "remove-btn";
+      removeBtn.innerHTML = "🗑️";
+      removeBtn.onclick = function() {
+        attachedFiles.splice(i, 1);
+        attachedFileObjs.splice(i, 1);
+        updateFileLists();
+        updateDownloadAllBtn();
+      };
+      actions.appendChild(downloadBtn);
+      actions.appendChild(removeBtn);
+      li.appendChild(icon);
+      li.appendChild(title);
+      li.appendChild(actions);
+      list.appendChild(li);
     });
+    container.appendChild(list);
   }
-  function base64ToUint8Array(b64) {
-    var binary = atob(b64);
-    var len = binary.length;
-    var bytes = new Uint8Array(len);
-    for (var i = 0; i < len; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
+  if (lastDecryptedFiles.length > 0) {
+    const label = document.createElement('span');
+    label.className = "file-section-label";
+    label.textContent = "Decrypted Files:";
+    container.appendChild(label);
+    const list = document.createElement('ul');
+    list.className = "file-list";
+    lastDecryptedFiles.forEach((f, i) => {
+      const li = document.createElement('li');
+      li.className = "file-pill";
+      const icon = document.createElement('span');
+      icon.className = "file-icon";
+      icon.textContent = getFileTypeIcon(f.name);
+      const title = document.createElement('span');
+      title.className = "file-title";
+      title.textContent = f.name;
+      const actions = document.createElement('span');
+      actions.className = "file-actions";
+      const downloadBtn = document.createElement('button');
+      downloadBtn.type = "button";
+      downloadBtn.title = "Download";
+      downloadBtn.innerHTML = "⬇️";
+      downloadBtn.onclick = function() {
+        const blob = new Blob([f.data]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = f.name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+      };
+      actions.appendChild(downloadBtn);
+      li.appendChild(icon);
+      li.appendChild(title);
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+    container.appendChild(list);
   }
-
-  async function encrypt() {
-    const keyStr = document.getElementById('key').value;
-    let num = document.getElementById('num').value;
-    const plaintext = document.getElementById('plaintext').value;
-    if (!keyStr || !plaintext) return alert("Provide key and plaintext.");
-    if (!num || num === "0") {
-      num = Math.floor(Math.random() * 1000000);
-      document.getElementById('num').value = num;
-    }
-    let envelope = null;
-    if (attachedFiles.length > 0) {
-      const filesArr = [];
-      for (const file of attachedFiles) {
-        const fileDataB64 = await fileToBase64(file);
-        filesArr.push({
-          n: file.name,
-          d: fileDataB64
-        });
-      }
-      envelope = JSON.stringify({
-        t: plaintext,
-        files: filesArr
+}
+async function encrypt() {
+  const keyStr = document.getElementById('key').value;
+  let num = document.getElementById('num').value;
+  const plaintext = document.getElementById('plaintext').value;
+  if (!keyStr || !plaintext) return alert("Provide key and plaintext.");
+  if (!num || num === "0") {
+    num = Math.floor(Math.random() * 1000000);
+    document.getElementById('num').value = num;
+  }
+  let envelope = null;
+  if (attachedFileObjs.length > 0) {
+    const filesArr = [];
+    for (const file of attachedFileObjs) {
+      const fileDataB64 = await fileToBase64(file);
+      filesArr.push({
+        n: file.name,
+        d: fileDataB64
       });
-    } else {
-      envelope = JSON.stringify({ t: plaintext });
     }
-    const finalHash = await getFinalHash(keyStr, num);
-    const aesKey = await hashToKey(finalHash);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ctBuf = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv }, aesKey, strToBuf(envelope)
+    envelope = JSON.stringify({
+      t: plaintext,
+      files: filesArr
+    });
+  } else {
+    envelope = JSON.stringify({ t: plaintext });
+  }
+  const finalHash = await getFinalHash(keyStr, num);
+  const aesKey = await hashToKey(finalHash);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ctBuf = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv }, aesKey, strToBuf(envelope)
+  );
+  const full = new Uint8Array([...iv, ...new Uint8Array(ctBuf)]);
+  document.getElementById('ciphertext').value = bufToB64(full);
+  attachedFiles = [];
+  attachedFileObjs = [];
+  lastDecryptedFiles = [];
+  updateFileLists();
+  updateDownloadAllBtn();
+  document.getElementById('fileInput').value = "";
+  showTabContent('tab2');
+}
+async function decrypt() {
+  const keyStr = document.getElementById('key').value;
+  const num = document.getElementById('num').value;
+  const b64 = document.getElementById('ciphertext').value;
+  if (!keyStr || !num || !b64) return alert("Provide key, message number, and ciphertext.");
+  const full = b64ToBuf(b64.trim());
+  const iv = full.slice(0, 12);
+  const ct = full.slice(12);
+  const finalHash = await getFinalHash(keyStr, num);
+  const aesKey = await hashToKey(finalHash);
+  try {
+    const ptBuf = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv }, aesKey, ct
     );
-    const full = new Uint8Array([...iv, ...new Uint8Array(ctBuf)]);
-    document.getElementById('ciphertext').value = bufToB64(full);
-    attachedFiles = [];
-    updateAttachedFilesList();
-    document.getElementById('fileInput').value = "";
-    document.getElementById('downloadAttachedBtn').style.display = "none";
-    showTabContent('tab2');
-  }
-
-  async function decrypt() {
-    const keyStr = document.getElementById('key').value;
-    const num = document.getElementById('num').value;
-    const b64 = document.getElementById('ciphertext').value;
-    if (!keyStr || !num || !b64) return alert("Provide key, message number, and ciphertext.");
-    const full = b64ToBuf(b64.trim());
-    const iv = full.slice(0, 12);
-    const ct = full.slice(12);
-    const finalHash = await getFinalHash(keyStr, num);
-    const aesKey = await hashToKey(finalHash);
+    const envelopeStr = bufToStr(ptBuf);
+    let envelope;
     try {
-      const ptBuf = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv }, aesKey, ct
-      );
-      const envelopeStr = bufToStr(ptBuf);
-      let envelope;
-      try {
-        envelope = JSON.parse(envelopeStr);
-      } catch {
-        throw new Error('Corrupted decrypted data');
-      }
-      document.getElementById('plaintext').value = envelope.t || "";
-      lastDecryptedFiles = [];
-      if (envelope.files && Array.isArray(envelope.files) && envelope.files.length > 0) {
-        lastDecryptedFiles = envelope.files.map(f => ({
-          name: f.n,
-          data: base64ToUint8Array(f.d)
-        }));
-        document.getElementById('downloadAttachedBtn').style.display = "inline";
-      } else {
-        document.getElementById('downloadAttachedBtn').style.display = "none";
-        lastDecryptedFiles = [];
-      }
-      showTabContent('tab1');
+      envelope = JSON.parse(envelopeStr);
     } catch {
-      alert("Decryption failed! (wrong key/message number or data corrupted)");
+      throw new Error('Corrupted decrypted data');
     }
-  }
-
-  function downloadAttachedFile() {
-    if (!lastDecryptedFiles.length) return;
-    if (lastDecryptedFiles.length === 1) {
-      const blob = new Blob([lastDecryptedFiles[0].data]);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = lastDecryptedFiles[0].name;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-    } else {
-      const zipName = "attachments.zip";
-      createAndDownloadZip(lastDecryptedFiles, zipName);
+    document.getElementById('plaintext').value = envelope.t || "";
+    lastDecryptedFiles = [];
+    if (envelope.files && Array.isArray(envelope.files) && envelope.files.length > 0) {
+      lastDecryptedFiles = envelope.files.map(f => ({
+        name: f.n,
+        data: base64ToUint8Array(f.d)
+      }));
     }
+    attachedFiles = [];
+    attachedFileObjs = [];
+    updateFileLists();
+    updateDownloadAllBtn();
+    showTabContent('tab1');
+  } catch {
+    alert("Decryption failed! (wrong key/message number or data corrupted)");
   }
-
-  function createAndDownloadZip(files, zipName) {
+}
+function downloadAllFiles() {
+  let files = [];
+  if (lastDecryptedFiles.length > 0) {
+    files = lastDecryptedFiles.map(f => ({ name: f.name, getBlob: () => new Blob([f.data]) }));
+  } else if (attachedFiles.length > 0) {
+    files = attachedFiles.map(f => ({ name: f.name, getBlob: () => new Blob([f.file], { type: f.file.type }) }));
+  }
+  if (files.length === 0) return;
+  if (files.length === 1) {
+    const blob = files[0].getBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = files[0].name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  } else {
     if (typeof JSZip === "undefined") {
       alert("Multiple file download requires JSZip library.");
       return;
     }
     const zip = new JSZip();
-    files.forEach(f => zip.file(f.name, f.data));
+    files.forEach(f => zip.file(f.name, f.getBlob()));
     zip.generateAsync({ type: "blob" }).then(blob => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = zipName;
+      a.download = "attachments.zip";
       document.body.appendChild(a);
       a.click();
       setTimeout(() => {
@@ -528,18 +581,21 @@ button:hover, button:focus {
       }, 100);
     });
   }
-  
-  function showTabContent(tabId) {
-    document.querySelectorAll('.tab-content').forEach(
-      c => c.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    document.querySelectorAll('#tabs .tab').forEach(tab => tab.classList.remove('active'));
-    if (tabId === 'tab1') {
-      document.querySelectorAll('#tabs .tab')[0].classList.add('active');
-    } else {
-      document.querySelectorAll('#tabs .tab')[1].classList.add('active');
-    }
+}
+function showTabContent(tabId) {
+  document.querySelectorAll('.tab-content').forEach(
+    c => c.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  document.querySelectorAll('#tabs .tab').forEach(tab => tab.classList.remove('active'));
+  if (tabId === 'tab1') {
+    document.querySelectorAll('#tabs .tab')[0].classList.add('active');
+  } else {
+    document.querySelectorAll('#tabs .tab')[1].classList.add('active');
   }
+}
+showTabContent('tab1');
+updateFileLists();
+updateDownloadAllBtn();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </html>
