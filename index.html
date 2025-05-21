@@ -119,6 +119,7 @@ button:hover, button:focus {
   <body>
     <input type="text" placeholder="encryption key" id="key">
     <input type="number" placeholder="message number" id="num">
+    <button id="newMessageBtn">New message</button>
     <div id="tabs">
       <div class="tab" onclick="showTabContent('tab1')">Encrypt</div>
       <div class="tab" onclick="showTabContent('tab2')">Decrypt</div>
@@ -138,6 +139,13 @@ button:hover, button:focus {
     </div>
   </body>
 <script>
+  document.getElementById('newMessageBtn').addEventListener('click', function() {
+    document.getElementById('message').value = '';
+    let fileInput = document.getElementById('fileInput');
+    if(fileInput) fileInput.value = '';
+    let msgNum = Math.floor(Math.random() * 900000) + 100000;
+    document.getElementById('messageNum').value = msgNum;
+});
   showTabContent('tab1')
   function strToBuf(str) {
     return new TextEncoder().encode(str);
