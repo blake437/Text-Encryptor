@@ -221,6 +221,13 @@ button:hover, button:focus {
   </body>
 <script>
   showTabContent('tab1')
+document.getElementById('newMessageBtn').addEventListener('click', function() {
+    document.getElementById('message').value = '';
+    let fileInput = document.getElementById('fileInput');
+    if(fileInput) fileInput.value = '';
+    let msgNum = Math.floor(Math.random() * 900000) + 100000;
+    document.getElementById('messageNum').value = msgNum;
+});
   function strToBuf(str) {
     return new TextEncoder().encode(str);
   }
