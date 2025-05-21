@@ -1,7 +1,6 @@
 <html>
   <head>
     <style>
-      /* Add basic styles for tabs */
       .tab {
   background: #f7f7f7;
   border: 1px solid #bbb;
@@ -17,41 +16,34 @@
   top: 1px;
   transition: background 0.2s;
 }
-
 #tabs {
   display: flex;
   flex-direction: row;
-  margin-bottom: -1px; /* aligns with tab borders */
+  margin-bottom: -1px;
 }
-      
 .tab.active {
   background: #fff;
   font-weight: bold;
   border-color: #888 #888 #fff #888;
   z-index: 1;
 }
-
 .tab:not(.active):hover {
   background: #ececec;
 }
-
-      .tab-content {
-        display: none;
-        border: 1px solid #ccc;
-        padding: 15px;
-        margin-top: 10px;
-      }
-
-      .tab-content.active {
-        display: block !important;
-      }
+.tab-content {
+  display: none;
+  border: 1px solid #ccc;
+  padding: 15px;
+  margin-top: 10px;
+}
+.tab-content.active {
+  display: block !important;
+}
     </style>
   </head>
   <body>
     <input type="text" placeholder="encryption key" id="key">
     <input type="number" placeholder="message number" id="num">
-
-    <!-- Tabs -->
     <div id="tabs">
       <div class="tab" onclick="showTabContent('tab1')">Encrypt</div>
       <div class="tab" onclick="showTabContent('tab2')">Decrypt</div>
@@ -60,6 +52,9 @@
       Plaintext:
       <textarea id="plaintext"></textarea>
       <button type="button" onclick="encrypt()">Encrypt</button>
+      <input type="file" id="fileInput" style="display:none" />
+      <button type="button" onclick="document.getElementById('fileInput').click()">Attach File</button>
+      <button type="button" id="downloadAttachedBtn" style="display:none" onclick="downloadAttachedFile()">Download Attached File</button>
     </div>
     <div id="tab2" class="tab-content">
       Ciphertext:
@@ -69,7 +64,6 @@
   </body>
 <script>
   showTabContent('tab1')
-  // Helper: Convert a string to ArrayBuffer
   function strToBuf(str) {
     return new TextEncoder().encode(str);
   }
@@ -82,23 +76,17 @@
   function b64ToBuf(b64) {
     return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   }
-
-  // Helper: SHA-256 as hex string
   async function sha256(message) {
     const data = strToBuf(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
-
-  // Derive AES key from SHA-256 hex (finalHash)
   async function hashToKey(hashHex) {
     const raw = Uint8Array.from(hashHex.match(/.{2}/g).map(b => parseInt(b, 16)));
     return crypto.subtle.importKey(
       "raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]
     );
   }
-
-  // Compute finalHash using your logic
   async function getFinalHash(key, num) {
     const keyHash = await sha256(key);
     const numHash = await sha256(num);
@@ -108,26 +96,72 @@
     return sha256(multiplied.toString());
   }
 
+  let attachedFile = null;
+  let attachedFilename = "";
+  let lastDecryptedFile = null;
+  let lastDecryptedFilename = "";
+
+  document.getElementById('fileInput').addEventListener('change', function(evt) {
+    if (evt.target.files.length > 0) {
+      attachedFile = evt.target.files[0];
+      attachedFilename = attachedFile.name;
+      document.getElementById('downloadAttachedBtn').style.display = "none";
+    } else {
+      attachedFile = null;
+      attachedFilename = "";
+    }
+  });
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(btoa(e.target.result));
+      reader.onerror = reject;
+      reader.readAsBinaryString(file);
+    });
+  }
+  function base64ToUint8Array(b64) {
+    var binary = atob(b64);
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
   async function encrypt() {
     const keyStr = document.getElementById('key').value;
     let num = document.getElementById('num').value;
     const plaintext = document.getElementById('plaintext').value;
     if (!keyStr || !plaintext) return alert("Provide key and plaintext.");
-
     if (!num || num === "0") {
       num = Math.floor(Math.random() * 1000000);
       document.getElementById('num').value = num;
     }
-
+    let envelope = null;
+    if (attachedFile) {
+      const fileDataB64 = await fileToBase64(attachedFile);
+      envelope = JSON.stringify({
+        t: plaintext,
+        f: attachedFilename,
+        d: fileDataB64
+      });
+    } else {
+      envelope = JSON.stringify({ t: plaintext });
+    }
     const finalHash = await getFinalHash(keyStr, num);
     const aesKey = await hashToKey(finalHash);
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const ctBuf = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv }, aesKey, strToBuf(plaintext)
+      { name: "AES-GCM", iv }, aesKey, strToBuf(envelope)
     );
-    // Output: base64(iv + ciphertext)
     const full = new Uint8Array([...iv, ...new Uint8Array(ctBuf)]);
     document.getElementById('ciphertext').value = bufToB64(full);
+    attachedFile = null;
+    attachedFilename = "";
+    document.getElementById('fileInput').value = "";
+    document.getElementById('downloadAttachedBtn').style.display = "none";
     showTabContent('tab2');
   }
 
@@ -136,37 +170,63 @@
     const num = document.getElementById('num').value;
     const b64 = document.getElementById('ciphertext').value;
     if (!keyStr || !num || !b64) return alert("Provide key, message number, and ciphertext.");
-
-    const full = b64ToBuf(b64);
+    const full = b64ToBuf(b64.trim());
     const iv = full.slice(0, 12);
     const ct = full.slice(12);
     const finalHash = await getFinalHash(keyStr, num);
     const aesKey = await hashToKey(finalHash);
-
     try {
       const ptBuf = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv }, aesKey, ct
       );
-      document.getElementById('plaintext').value = bufToStr(ptBuf);
+      const envelopeStr = bufToStr(ptBuf);
+      let envelope;
+      try {
+        envelope = JSON.parse(envelopeStr);
+      } catch {
+        throw new Error('Corrupted decrypted data');
+      }
+      document.getElementById('plaintext').value = envelope.t || "";
+      if (envelope.f && envelope.d) {
+        lastDecryptedFile = base64ToUint8Array(envelope.d);
+        lastDecryptedFilename = envelope.f;
+        document.getElementById('downloadAttachedBtn').style.display = "inline";
+      } else {
+        lastDecryptedFile = null;
+        lastDecryptedFilename = "";
+        document.getElementById('downloadAttachedBtn').style.display = "none";
+      }
       showTabContent('tab1');
     } catch {
       alert("Decryption failed! (wrong key/message number or data corrupted)");
     }
   }
 
-  // Tab logic
-  function showTabContent(tabId) {
-  document.querySelectorAll('.tab-content').forEach(
-    c => c.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  // Add this to update tab styling
-  document.querySelectorAll('#tabs .tab').forEach(tab => tab.classList.remove('active'));
-  if (tabId === 'tab1') {
-    document.querySelectorAll('#tabs .tab')[0].classList.add('active');
-  } else {
-    document.querySelectorAll('#tabs .tab')[1].classList.add('active');
+  function downloadAttachedFile() {
+    if (!lastDecryptedFile || !lastDecryptedFilename) return;
+    const blob = new Blob([lastDecryptedFile]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = lastDecryptedFilename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   }
-}
+
+  function showTabContent(tabId) {
+    document.querySelectorAll('.tab-content').forEach(
+      c => c.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelectorAll('#tabs .tab').forEach(tab => tab.classList.remove('active'));
+    if (tabId === 'tab1') {
+      document.querySelectorAll('#tabs .tab')[0].classList.add('active');
+    } else {
+      document.querySelectorAll('#tabs .tab')[1].classList.add('active');
+    }
+  }
 </script>
 </html>
-
