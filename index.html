@@ -97,7 +97,8 @@ body {
 }
 
 .above-tabs input[type="text"], 
-.above-tabs input[type="number"] {
+.above-tabs input[type="number"],
+.above-tabs input[type="password"]{
   width: 180px;
   padding: 7px 12px;
   font-size: 15px;
@@ -108,6 +109,7 @@ body {
   transition: border-color 0.2s;
 }
 .above-tabs input[type="text"]:focus, 
+.above-tabs input[type="password"]:focus,
 .above-tabs input[type="number"]:focus {
   outline: none;
   border-color: #0078d7;
@@ -128,7 +130,7 @@ body {
   color: #222;
   border-color: #888;
 }
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], input[type="number"]{
   width: 220px;
   padding: 7px 12px;
   font-size: 15px;
@@ -138,7 +140,7 @@ input[type="text"], input[type="number"] {
   background-color: #f9f9f9;
   transition: border-color 0.2s;
 }
-input[type="text"]:focus, input[type="number"]:focus {
+input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus{
   outline: none;
   border-color: #0078d7;
 }
@@ -261,7 +263,7 @@ button:hover, button:focus {
     max-width: 98vw;
     gap: 10px;
   }
-  .above-tabs input[type="text"], .above-tabs input[type="number"] {
+  .above-tabs input[type="text"], .above-tabs input[type="number"], .above-tabs input[type="password"] {
     width: 96vw;
     max-width: 98vw;
   }
