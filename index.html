@@ -293,10 +293,13 @@ button:hover, button:focus {
       <button type="button" id="downloadAllBtn" style="display:none" onclick="downloadAllFiles()">Download All Files</button>
     </div>
     <div id="tab2" class="tab-content">
-      Ciphertext:
-      <textarea id="ciphertext"></textarea>
-      <button type="button" onclick="decrypt()">Decrypt</button>
-    </div>
+  Ciphertext:
+  <textarea id="ciphertext"></textarea>
+  <button type="button" onclick="decrypt()">Decrypt</button>
+  <button type="button" id="downloadCipherBtn">Download .ciphertext</button>
+  <input type="file" id="uploadCipherInput" style="display:none" accept=".ciphertext">
+  <button type="button" onclick="document.getElementById('uploadCipherInput').click()">Upload .ciphertext</button>
+</div>
   </body>
 <script>
 function strToBuf(str) {
@@ -623,6 +626,47 @@ function showTabContent(tabId) {
     document.querySelectorAll('#tabs .tab')[1].classList.add('active');
   }
 }
+document.getElementById('downloadCipherBtn').addEventListener('click', function() {
+  const ciphertext = document.getElementById('ciphertext').value.trim();
+  const num = document.getElementById('num').value.trim();
+  if (!ciphertext || !num) {
+    alert("Ciphertext and message number are required.");
+    return;
+  }
+  const data = JSON.stringify({ciphertext: ciphertext, number: num});
+  const blob = new Blob([data], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "ciphertext.ciphertext";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  }, 100);
+});
+
+document.getElementById('uploadCipherInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const obj = JSON.parse(event.target.result);
+      if (typeof obj.ciphertext === "string" && typeof obj.number !== "undefined") {
+        document.getElementById('ciphertext').value = obj.ciphertext;
+        document.getElementById('num').value = obj.number;
+        alert("Ciphertext and message number loaded. Enter your key and click Decrypt.");
+      } else {
+        alert("Invalid ciphertext file.");
+      }
+    } catch {
+      alert("Could not read .ciphertext file.");
+    }
+    e.target.value = ""; // reset input so same file can be chosen again if needed
+  };
+  reader.readAsText(file);
+});
 showTabContent('tab1');
 updateFileLists();
 updateDownloadAllBtn();
