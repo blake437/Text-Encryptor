@@ -634,7 +634,7 @@ document.getElementById('downloadCipherBtn').addEventListener('click', function(
     return;
   }
   const data = JSON.stringify({ciphertext: ciphertext, number: num});
-  const blob = new Blob([data], {type: 'application/json'});
+  const blob = new Blob([data], {type: 'application/octet-stream'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = "ciphertext.ciphertext";
@@ -645,7 +645,7 @@ document.getElementById('downloadCipherBtn').addEventListener('click', function(
     URL.revokeObjectURL(a.href);
   }, 100);
 });
-
+  
 document.getElementById('uploadCipherInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
